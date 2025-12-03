@@ -1,5 +1,5 @@
 /data/
 /legacy/
-/models/
+/artifacts/
 *.ipynb
 __pycache__
