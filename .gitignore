@@ -1,0 +1,6 @@
+/configs/
+/data/
+/legacy/
+/models/
+*.ipynb
+__pycache__
