@@ -1,0 +1,42 @@
+paths:
+  train_data_dir: 'data/train_clean'
+  val_data_dir: 'data/val'
+  test_data_dir: 'data/test_no_reference'
+  log_dir: 'artifacts/logs'
+  checkpoints: 'artifacts/checkpoints'
+
+env:
+  seed: 42
+  device: 'cuda'
+
+model:
+  d_model: 64
+  nhead: 2
+  num_encoder_layers: 2
+  num_decoder_layers: 2
+  dim_feedforward: 256
+  dropout: 0.1
+  activation: 'gelu'
+
+training_params:
+  num_epochs: 2
+  batch_size: 128
+  lr: 5e-3
+  weight_decay: 1e-5
+  gamma: 0.9
+  gradient_clip: 1.0
+
+src_tokenizer:
+  file_name: 'src_tokenizer.json'
+  vocab_size: 1000
+  max_length: 100
+  min_frequency: 2
+  special_tokens: ["[PAD]", "[BOS]", "[EOS]"]
+
+dst_tokenizer:
+  file_name: 'dst_tokenizer.json'
+  vocab_size: 1000
+  max_length: 100
+  min_frequency: 2
+  special_tokens: ["[PAD]", "[BOS]", "[EOS]"]
+
