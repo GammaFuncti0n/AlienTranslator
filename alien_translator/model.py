@@ -275,3 +275,5 @@ class TransformerModule():
                 loss = self.criterion(out.reshape(-1, out.size(-1)), batch['dst_input_ids'][:,1:].reshape(-1).to(self.device))
                 val_loss_list.append(loss.item())
         return np.mean(val_loss_list)
+
+    

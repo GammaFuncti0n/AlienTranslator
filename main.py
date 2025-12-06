@@ -21,18 +21,38 @@ def main():
     with open('configs/config.yaml', 'r') as f:
         config = yaml.safe_load(f)
     
+    # Init some stuff
     module = TranslatorModule(config)
     module.prepare_data()
     module.init_tokenizers()
 
     train_dataloader, val_dataloader = module.init_dataloaders()
 
+    # Load or fit the model
     model = TransformerModule(config)
-    model.fit(train_dataloader, val_dataloader)
+    try:
+        last_checkpoint = torch.load(os.path.join(config['paths']['checkpoints'], 'transformer.pt'), weights_only=False)
+        model._model.load_state_dict(last_checkpoint['model_state_dict'])
+    except:
+        model.fit(train_dataloader, val_dataloader)
 
-    ## TO DO ##
-    # evaluate model
-    # save test
+    # evaluate on test data
+    test_dst = translate(
+        model._model, 
+        module.src_tokenizer, 
+        module.dst_tokenizer, 
+        module.src_test_texts, 
+        config['training_params']['batch_size'], 
+        config['env']['device'], 
+        config['dst_tokenizer']['max_length']
+        )
+
+    # save submission
+    with open('data/submission', 'w', encoding='utf-8') as f:
+        for i in range(len(test_dst)):
+            item = {'src': module.src_test_texts[i], 'dst': test_dst[i]}
+            json_line = json.dumps(item, ensure_ascii=False)
+            f.write(json_line + '\n')
 
 class TranslatorModule():
     def __init__(self, config: Dict) -> None:
@@ -40,6 +60,8 @@ class TranslatorModule():
         init method
         '''
         self.config = config
+        self.device = config['env']['device']
+        self.max_length = config['dst_tokenizer']['max_length']
     
     def prepare_data(self):
         '''
@@ -54,6 +76,8 @@ class TranslatorModule():
         
         self.src_val_texts = [line['src'] for line in val_data]
         self.dst_val_texts = [line['dst'] for line in val_data]
+
+        self.src_test_texts = [line['src'] for line in test_data]
     
     def _load_data(self, path):
         """
@@ -116,6 +140,40 @@ class TranslatorModule():
             shuffle=False
             )
         return train_dataloader, val_dataloader
+
+def translate(model, src_tokenizer, dst_tokenizer, test_src, batch_size, device='cpu', max_length=100):
+    test_dst = []
+    for i in range(len(test_src)//batch_size+int(len(test_src)%batch_size!=0)):
+        texts = test_src[i*batch_size:(i+1)*batch_size]
+
+        src_input = src_tokenizer.encode(texts)
+        src_input_ids = src_input['input_ids'].to(device)
+        src_attention_mask=src_input['attention_mask'].to(device)
+
+        dst_input = dst_tokenizer.encode(len(src_input_ids)*['[BOS]'])['input_ids'].to(device)
+
+        for i in range(max_length):
+            with torch.no_grad():
+                out = model(
+                    src_input_ids=src_input_ids, 
+                    dst_input_ids=dst_input, 
+                    src_attention_mask=src_attention_mask,
+                    dst_attention_mask=(dst_input!=0)
+                )
+            out_tokens = out[:,-1,:].argmax(-1).reshape(-1,1)
+            dst_input = torch.concat((dst_input, out_tokens), -1)
+        dst_output = dst_tokenizer.decode(dst_input)
+        final_res = []
+        for s in dst_output:
+            final_s = ''
+            for i in range(6, len(s)):
+                if(s[i:i+5]=='[EOS]'):
+                    break
+                else:
+                    final_s += s[i]
+            final_res.append(final_s)
+        test_dst = test_dst + final_res
+    return test_dst
 
 if __name__ == "__main__":
     main()
