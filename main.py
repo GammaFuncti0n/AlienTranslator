@@ -49,7 +49,7 @@ def main():
         model._model.load_state_dict(last_checkpoint['model_state_dict'])
         logging.info(f"Model succesfully loaded from checkpoint: epoch {last_checkpoint['epoch']}")
     except:
-        logging.info(f"Can not load model from sheckpoint, will fit it")
+        logging.info(f"Can not load model from checkpoint, will fit it")
         model.fit(train_dataloader, val_dataloader)
         logging.info(f"Model succefully fitted")
 

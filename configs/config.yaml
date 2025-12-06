@@ -21,7 +21,7 @@ model_params:
 training_params:
   ignore_index: 0
   num_epochs: 2
-  batch_size: 128
+  batch_size: 512
   lr: 5e-3
   weight_decay: 1e-5
   gamma: 0.9
