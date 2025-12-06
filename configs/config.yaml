@@ -9,7 +9,7 @@ env:
   seed: 42
   device: 'cuda'
 
-model:
+model_params:
   d_model: 64
   nhead: 2
   num_encoder_layers: 2
@@ -19,6 +19,7 @@ model:
   activation: 'gelu'
 
 training_params:
+  ignore_index: 0
   num_epochs: 2
   batch_size: 128
   lr: 5e-3

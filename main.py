@@ -2,8 +2,12 @@ import yaml
 import json
 import os
 from typing import Dict
+import numpy as np
+import torch
+import torch.nn as nn
 
-from alien_translator.model import TranslateTokenizer
+from alien_translator.model import TranslateTokenizer, TransformerModule
+from alien_translator.data import Dataloader
 
 # from clearml import Task, Logger
 # from configs.config import clearml_config
@@ -17,15 +21,16 @@ def main():
     with open('configs/config.yaml', 'r') as f:
         config = yaml.safe_load(f)
     
-    ## TO DO ##
-
-    # load data
     module = TranslatorModule(config)
     module.prepare_data()
-
-    # prepare tokenizer
     module.init_tokenizers()
-    # fit model
+
+    train_dataloader, val_dataloader = module.init_dataloaders()
+
+    model = TransformerModule(config)
+    model.fit(train_dataloader, val_dataloader)
+
+    ## TO DO ##
     # evaluate model
     # save test
 
@@ -65,7 +70,7 @@ class TranslatorModule():
     
     def init_tokenizers(self):
         '''
-        Initialize tokenizer load it or fit
+        Initialize tokenizer, load it or fit
         '''
         self.src_tokenizer = TranslateTokenizer(self.config['src_tokenizer']['max_length'])
         self.dst_tokenizer = TranslateTokenizer(self.config['dst_tokenizer']['max_length'])
@@ -89,6 +94,28 @@ class TranslatorModule():
                 min_frequency=self.config['dst_tokenizer']['min_frequency'],
                 special_tokens=self.config['dst_tokenizer']['special_tokens']
                 )
+    
+    def init_dataloaders(self):
+        '''
+        Initialize train and val dataloaders
+        '''
+        train_dataloader = Dataloader(
+            self.src_train_texts, 
+            self.dst_train_texts, 
+            self.src_tokenizer, 
+            self.dst_tokenizer, 
+            batch_size=self.config['training_params']['batch_size'], 
+            shuffle=True
+            )
+        val_dataloader = Dataloader(
+            self.src_val_texts, 
+            self.dst_val_texts, 
+            self.src_tokenizer, 
+            self.dst_tokenizer, 
+            batch_size=self.config['training_params']['batch_size'], 
+            shuffle=False
+            )
+        return train_dataloader, val_dataloader
 
 if __name__ == "__main__":
     main()
