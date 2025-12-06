@@ -1,5 +1,5 @@
 /data/
 /legacy/
 /artifacts/
-*.ipynb
+notebook.ipynb
 __pycache__
