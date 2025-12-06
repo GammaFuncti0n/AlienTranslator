@@ -9,6 +9,9 @@ import torch.nn as nn
 from alien_translator.model import TranslateTokenizer, TransformerModule
 from alien_translator.data import Dataloader
 
+import logging
+
+
 # from clearml import Task, Logger
 # from configs.config import clearml_config
 
@@ -20,6 +23,17 @@ from alien_translator.data import Dataloader
 def main():
     with open('configs/config.yaml', 'r') as f:
         config = yaml.safe_load(f)
+    torch.manual_seed(config['env']['seed'])
+
+    os.makedirs(config['paths']['log_dir'], exist_ok=True)
+    logging.basicConfig(
+        level=logging.INFO, 
+        filename=os.path.join(config['paths']['log_dir'], 'log.log'), 
+        filemode="w", 
+        format="%(asctime)s %(levelname)s %(message)s", 
+        encoding='utf-8'
+        )
+    logging.info(config)
     
     # Init some stuff
     module = TranslatorModule(config)
@@ -33,8 +47,11 @@ def main():
     try:
         last_checkpoint = torch.load(os.path.join(config['paths']['checkpoints'], 'transformer.pt'), weights_only=False)
         model._model.load_state_dict(last_checkpoint['model_state_dict'])
+        logging.info(f"Model succesfully loaded from checkpoint: epoch {last_checkpoint['epoch']}")
     except:
+        logging.info(f"Can not load model from sheckpoint, will fit it")
         model.fit(train_dataloader, val_dataloader)
+        logging.info(f"Model succefully fitted")
 
     # evaluate on test data
     test_dst = translate(
@@ -53,6 +70,7 @@ def main():
             item = {'src': module.src_test_texts[i], 'dst': test_dst[i]}
             json_line = json.dumps(item, ensure_ascii=False)
             f.write(json_line + '\n')
+    logging.info("Completed!")
 
 class TranslatorModule():
     def __init__(self, config: Dict) -> None:
@@ -103,7 +121,9 @@ class TranslatorModule():
         try:
             self.src_tokenizer.load(src_tokenizer_path)
             self.dst_tokenizer.load(dst_tokenizer_path)
+            logging.info("Tokenizers succesfully loaded")
         except:
+            logging.info("Can not load tokenizers, will fit it")
             self.src_tokenizer.fit(
                 self.src_train_texts, 
                 src_tokenizer_path,
@@ -118,6 +138,7 @@ class TranslatorModule():
                 min_frequency=self.config['dst_tokenizer']['min_frequency'],
                 special_tokens=self.config['dst_tokenizer']['special_tokens']
                 )
+            logging.info("Tokenizers succesfully fitted")
     
     def init_dataloaders(self):
         '''
